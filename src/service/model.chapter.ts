@@ -4,12 +4,10 @@ import ModelService from './model';
 
 export interface ChapterModel {
   id: number;
-  name: string;
-  author: string;
-  image: boolean;
+  book_id: number;
+  title: string;
+  content: string;
   description: string;
-  category: string;
-  status: string;
   origin: string;
   created_at: string;
   updated_at: string;

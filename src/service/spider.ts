@@ -8,10 +8,12 @@ import * as cheerio from 'cheerio';
 import { Observable, Subject } from 'rxjs';
 import qs from 'qs';
 import { URL } from 'node:url';
+import EdgeService from './edge';
+import * as fs from 'fs/promises';
 
 @Injectable()
 export default class SpiderService {
-  constructor(private readonly httpService: HttpService, private readonly spiderModelService: SpiderModelService) {}
+  constructor(private readonly httpService: HttpService, private readonly spiderModelService: SpiderModelService, private readonly edgeService: EdgeService) {}
   public async search(keywords: string): Promise<SearchItem[]> {
     return await this._search_sipder(keywords);
   }
@@ -128,15 +130,15 @@ export default class SpiderService {
   private async _chapter_parse(response: AxiosResponse, eventSubject?: Subject<ItemEvent>) {
     // const spider: SpiderModel = await this.spiderModelService.find(1);
     const $ = cheerio.load(response.data);
-    console.log($('div#txt').contents().length)
-    $('div#txt').contents().each((_, element) => {
-      console.log(typeof element, $(element).html())
-    })
-    // console.log($('div#txt')[1])
-    // console.log($('div#txt')[2])
+    let content = '';
+    $('div#txt').contents().each((index, element) => {
+      if ((element.type === 'text' || (element.type === 'tag' && element.name !== 'a')) && $(element).text().trim() !== '') {
+        content += `<p style="text-indent: 2em; line-height: 2em;">${$(element).text().trim()}</p>\n`
+      }
+    });
     const search_item: ChapterItem = {
       title: $('h1').text().trim(),
-      content: $('div#txt').text().trim(),
+      content,
     };
     if (eventSubject) {
       eventSubject.next({ type: 'chapter', data: search_item, timestamp: new Date().toISOString() });

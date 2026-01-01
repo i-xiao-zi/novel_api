@@ -1,52 +1,22 @@
-import { Controller, Get, Sse } from '@nestjs/common';
-import AppService from '../service/app';
-import SpiderService from '../service/spider';
+import { Controller, Get, Query, Sse } from '@nestjs/common';
+import VoiceService from 'src/service/voice';
+import { VoicesManagerFind } from 'edge-tts-universal';
 
 @Controller('voice')
 export default class VoiceController {
-  constructor(private readonly appService: AppService, private readonly spiderService: SpiderService) {}
+  constructor(private readonly voiceService: VoiceService) {}
   
-  // @Sse('cover')
-  // async cover(): Promise<Observable<ItemEvent>> {
-  //   return this.spiderService.cover('https://www.biquge2345.com/xiaoshuo/036310/').pipe(map((event,index) => ({
-  //       id: index,
-  //       type: event.type,
-  //       data: event.data,
-  //       timestamp: event.timestamp,
-  //     }))
-  //   );
-  // }
+  @Get('voices')
+  async voices(@Query('option') option: VoicesManagerFind | true = {Locale: 'zh-CN'}) {
+    return this.voiceService.voices(option);
+  }
+  @Get('speak')
+  async speak(@Query('text') text: string, @Query('voice') voice?: string) {
+    return this.voiceService.speak(text, voice);
+  }
+  @Get('audio')
+  async audio(@Query('id') id: string|number = 'https://www.biquge2345.com/zhangjie/613115/26583799.html', @Query('voice') voice?: string) {
+    return this.voiceService.audio(id, voice);
+  }
 
-  // @Get('book')
-  // async book(): Promise<{code: number, msg: string, data: SpiderModel[]}> {
-  //   const {data, error} = await this.supabaseService.from('spider').select('*');
-  //   if (error) {
-  //     return {
-  //       code: 1,
-  //       msg: error.message,
-  //       data: [],
-  //     };
-  //   }
-  //   return {
-  //     code: 0,
-  //     msg: 'success',
-  //     data: data,
-  //   };
-  // }
-  // @Get('/chapter')
-  // async chapter(): Promise<{code: number, msg: string, data: SpiderModel[]}> {
-  //   const {data, error} = await this.supabaseService.from('spider').select('*');
-  //   if (error) {
-  //     return {
-  //       code: 1,
-  //       msg: error.message,
-  //       data: [],
-  //     };
-  //   }
-  //   return {
-  //     code: 0,
-  //     msg: 'success',
-  //     data: data,
-  //   };
-  // }
 }

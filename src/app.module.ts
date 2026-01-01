@@ -13,11 +13,13 @@ import ResponseInterceptor from './interceptor/response';
 import HttpExceptionFilter from './filter/exception';
 import BookModelService from './service/model.book';
 import ChapterModelService from './service/model.chapter';
+import EdgeService from './service/edge';
+import VoiceService from './service/voice';
 
 @Module({
   imports: [ConfigModule.forRoot(), HttpModule],
   controllers: [AppController, SpiderController, VoiceController],
-  providers: [AppService, SpiderService, ModelService, SpiderModelService, BookModelService, ChapterModelService, Reflector,
+  providers: [AppService, EdgeService, VoiceService, SpiderService, ModelService, SpiderModelService, BookModelService, ChapterModelService, Reflector,
     {
       provide: APP_INTERCEPTOR,
       useFactory: (reflector: Reflector) => new ResponseInterceptor(reflector),

@@ -1,16 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import axios from 'axios';
-import * as Cheerio from 'cheerio';
-
+import {
+  EdgeTTS,
+  Communicate,
+  VoicesManager,
+  VoicesManagerFind,
+  VoicesManagerVoice
+} from 'edge-tts-universal';
 @Injectable()
 export default class EdgeService {
-  getHello(): string {
-    return 'Hello World!';
+  async voices(option: VoicesManagerFind | true = {Locale: 'zh-CN'}): Promise<VoicesManagerVoice[]> {
+    const voicesManager = await VoicesManager.create();
+    return voicesManager.find(option === true ? {} : option);
   }
-  async search(): Promise<string> {
-    const html = await axios.get('https://www.baidu.com');
-    const $ = Cheerio.load(html.data);
-    const title = $('title').text();
-    return title;
+  async speak(text: string, voice?: string) {
+    const edgeTTS = new EdgeTTS(text, voice);
+    return await edgeTTS.synthesize();
   }
 }
