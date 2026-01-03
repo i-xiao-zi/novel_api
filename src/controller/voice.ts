@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Sse } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import VoiceService from 'src/service/voice';
 import { VoicesManagerFind } from 'edge-tts-universal';
 

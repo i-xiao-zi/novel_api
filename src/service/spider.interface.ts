@@ -1,6 +1,6 @@
 export interface ItemEvent {
-    type: 'search' | 'cover' | 'catalog' | 'chapter' | 'error' | 'complete' | 'close';
-    data: SearchItem | CoverItem | CatalogItem[] | ChapterItem | null;
+    type: 'book' | 'chapter' | 'error' | 'complete' | 'close';
+    data: CoverItem | ChapterItem | null;
     timestamp: string;
 }
 
@@ -16,11 +16,6 @@ export interface SearchItem {
     status?:         string;
 }
 
-export interface SearchItemEvent extends ItemEvent {
-    type: 'search';
-    item: SearchItem;
-}
-
 export interface CoverItem {
     title?:          string;
     author?:         string;
@@ -33,17 +28,14 @@ export interface CoverItem {
     status?:         string;
 }
 export interface CvoerItemmEvent extends ItemEvent {
-    type: 'cover';
+    type: 'book';
     item: CoverItem;
 }
 export interface CatalogItem {
     url?:            string;
     title?:          string;
 }
-export interface CatalogItemEvent extends ItemEvent {
-    type: 'catalog';
-    item: CatalogItem;
-}
+
 export interface ChapterItem {
     title?:          string;
     content?:        string;

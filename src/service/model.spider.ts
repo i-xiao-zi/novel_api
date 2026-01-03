@@ -5,9 +5,12 @@ import ModelService from './model';
 export interface SpiderModel {
   id: number;
   name: string;
+  origin: string;
+  headers: string;
   search_url: string;
   search_method: boolean;
   search_data: string;
+  search_content_type: string;
   search_cover_parent: string;
   search_cover_url: string;
   search_cover_title: string;
@@ -73,21 +76,19 @@ export default class SpiderModelService extends ModelService {
     if (typeof args === 'number') {
       query = query.eq('id', args);
     } else {
-      query = query.match(args);
+      for (const key in args) {
+        query = query.eq(key, args[key]);
+      }
     }
-    const result = await query;
-    return result.data?.[0] || null;
+    const result = await query.single();
+    return result.data || null;
   }
   async create(spider: Partial<SpiderModel>): Promise<SpiderModel | null> {
     const result = await this.table().insert(spider);
-    return result.data?.[0] || null;
+    return result.data || null;
   }
-  async update(id: number|Partial<SpiderModel>&{id: number}, spider?: Partial<SpiderModel>): Promise<SpiderModel | null> {
-    let query = this.table().update(typeof id === 'number' ? id : spider);
-    if (typeof id === 'number') {
-      query = query.eq('id', id);
-    }
-    const result = await query;
+  async update(id: number, spider?: Partial<SpiderModel>): Promise<SpiderModel | null> {
+    const result = await this.table().update(spider).eq('id', id);
     return result.data?.[0] || null;
   }
   async delete(id: number): Promise<SpiderModel | null> {

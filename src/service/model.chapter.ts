@@ -29,21 +29,19 @@ export default class ChapterModelService extends ModelService {
     if (typeof args === 'number') {
       query = query.eq('id', args);
     } else {
-      query = query.match(args);
+      for (const key in args) {
+        query = query.eq(key, args[key]);
+      }
     }
     const result = await query;
     return result.data?.[0] || null;
   }
-  async create(chapter: Partial<ChapterModel>): Promise<ChapterModel | null> {
+  async create(chapter: Partial<ChapterModel>| Partial<ChapterModel>[]): Promise<ChapterModel | null> {
     const result = await this.table().insert(chapter);
     return result.data?.[0] || null;
   }
-  async update(id: number|Partial<ChapterModel>&{id: number}, chapter?: Partial<ChapterModel>): Promise<ChapterModel | null> {
-    let query = this.table().update(typeof id === 'number' ? id : chapter);
-    if (typeof id === 'number') {
-      query = query.eq('id', id);
-    }
-    const result = await query;
+  async update(id: number, chapter?: Partial<ChapterModel>): Promise<ChapterModel | null> {
+    const result = await this.table().update(chapter).eq('id', id);
     return result.data?.[0] || null;
   }
   async delete(id: number): Promise<ChapterModel | null> {

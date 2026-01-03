@@ -6,7 +6,7 @@ export interface BookModel {
   id: number;
   name: string;
   author: string;
-  image: boolean;
+  image: string;
   description: string;
   category: string;
   status: string;
@@ -31,7 +31,9 @@ export default class BookModelService extends ModelService {
     if (typeof args === 'number') {
       query = query.eq('id', args);
     } else {
-      query = query.match(args);
+      for (const key in args) {
+        query = query.eq(key, args[key]);
+      }
     }
     const result = await query;
     return result.data?.[0] || null;
@@ -40,12 +42,8 @@ export default class BookModelService extends ModelService {
     const result = await this.table().insert(book);
     return result.data?.[0] || null;
   }
-  async update(id: number|Partial<BookModel>&{id: number}, book?: Partial<BookModel>): Promise<BookModel | null> {
-    let query = this.table().update(typeof id === 'number' ? id : book);
-    if (typeof id === 'number') {
-      query = query.eq('id', id);
-    }
-    const result = await query;
+  async update(id: number, book?: Partial<BookModel>): Promise<BookModel | null> {
+    const result = await this.table().update(book).eq('id', id);
     return result.data?.[0] || null;
   }
   async delete(id: number): Promise<BookModel | null> {

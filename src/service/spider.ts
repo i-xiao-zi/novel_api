@@ -10,10 +10,12 @@ import qs from 'qs';
 import { URL } from 'node:url';
 import EdgeService from './edge';
 import * as fs from 'fs/promises';
+import BookModelService from './model.book';
+import ChapterModelService from './model.chapter';
 
 @Injectable()
 export default class SpiderService {
-  constructor(private readonly httpService: HttpService, private readonly spiderModelService: SpiderModelService, private readonly edgeService: EdgeService) {}
+  constructor(private readonly httpService: HttpService, private readonly spiderModelService: SpiderModelService, private readonly bookService: BookModelService, private readonly chapterService: ChapterModelService) {}
   public async search(keywords: string): Promise<SearchItem[]> {
     return await this._search_sipder(keywords);
   }
@@ -41,7 +43,8 @@ export default class SpiderService {
     if (spiders.length == 0) {
       eventSubject.next({ type: 'error', data: null, timestamp: new Date().toISOString() });
     } else {
-      this._cover_sipder(url, eventSubject);
+      await this._cover_sipder(url, eventSubject);
+      eventSubject.next({ type: 'complete', data: null, timestamp: new Date().toISOString() });
     }
   }
   private async _search_sipder(keywords: string) {
@@ -49,14 +52,12 @@ export default class SpiderService {
     const spiders: SpiderModel[] = await this.spiderModelService.all();
     for (const spider of spiders) {
         if (spider.search_method) {
-          const data = spider.search_data.replace('{{data}}', `"${keywords}"`);
-          const response = await axios.post(spider.search_url, qs.stringify(JSON.parse(data)), {headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            }});
-            search_items.push(...this._search_parse(response));
+          const data = spider.search_data.replace('{{data}}', `${keywords}`);
+          const response = await axios.post(spider.search_url, data, {headers: {...JSON.parse(spider.headers || '{}'), ...JSON.parse(spider.search_content_type || '{}')}});
+            search_items.push(...(await this._search_parse(response)));
         } else {
-          const response = await axios.get(spider.search_url);
-          search_items.push(...this._search_parse(response));
+          const response = await axios.get(spider.search_url, {headers: JSON.parse(spider.headers || '{}')});
+          search_items.push(...(await this._search_parse(response)));
         }
       }
     return search_items;
@@ -73,77 +74,152 @@ export default class SpiderService {
     const response = await axios.get(url);
     return await this._chapter_parse(response, eventSubject);
   }
-  private _search_parse(response: AxiosResponse) {
+  private async _search_parse(response: AxiosResponse) {
+    const spider = await this.spiderModelService.find({ origin: (new URL(response.config.url as string)).origin });
+    if (!spider) {
+      return [];
+    }
     const $ = cheerio.load(response.data);
     const search_items: SearchItem[] = [];
-    // console.log(response.config.url)
-    $('div.lastupdate>ul>li').each((_, element) => {
-      search_items.push({
-        url: (new URL($(element).find('span.name>a').attr('href') as string, response.config.url)).toString(),
-        // url: $(element).find('span.name>a').attr('href'),
-        title: $(element).find('span.name>a').text().trim(),
-        category: $(element).find('span.lei>a').text().trim(),
-        author: $(element).find('span.zuo>a').text().trim(),
-      })
+    (eval(spider.search_cover_parent) as cheerio.Cheerio<any>).each((_, element) => {
+      let url = eval(spider.search_cover_url) as string;
+      url = (new URL(url, response.config.url)).toString();
+      let title = eval(spider.search_cover_title) as string;
+      if(spider.search_cover_title_regular) {
+        title = title.replace(new RegExp(spider.search_cover_title_regular), '');
+      }
+      let category = eval(spider.search_cover_category) as string;
+      if(spider.search_cover_category_regular) {
+        category = category.replace(new RegExp(spider.search_cover_category_regular), '');
+      }
+      let author = eval(spider.search_cover_author) as string;
+      if(spider.search_cover_author_regular) {
+        author = author.replace(new RegExp(spider.search_cover_author_regular), '');
+      }
+      search_items.push({ url, title, category, author })
     })
     return search_items;
   }
   private async _cover_parse(response: AxiosResponse, eventSubject?: Subject<ItemEvent>) {
-    const $ = cheerio.load(response.data);
-    const cover_item: CoverItem = {
-      title: eval(`$('meta[property="og:novel:book_name"]').attr('content')`),
-      author: $('meta[property="og:novel:author"]').attr('content'),
-      image: $('meta[property="og:image"]').attr('content'),
-      description: $('meta[property="og:description"]').attr('content'),
-      category: $('meta[property="og:novel:category"]').attr('content'),
-      latest: $('meta[property="og:novel:update_time"]').attr('content'),
-      latest_title: $('meta[property="og:novel:latest_chapter_name"]').attr('content'),
-      latest_url: $('meta[property="og:novel:latest_chapter_url"]').attr('content'),
-      status: $('meta[property="og:novel:status"]').attr('content'),
+    const spider = await this.spiderModelService.find({ origin: (new URL(response.config.url as string)).origin });
+    if (!spider) {
+      return;
     }
+    const $ = cheerio.load(response.data);
+    let title = eval(spider.cover_title) as string;
+    if(spider.cover_title_regular) {
+      title = title.replace(new RegExp(spider.cover_title_regular), '');
+    }
+    let author = eval(spider.cover_author) as string;
+    if(spider.cover_author_regular) {
+      author = author.replace(new RegExp(spider.cover_author_regular), '');
+    }
+    let category = eval(spider.cover_category) as string;
+    if(spider.cover_category_regular) {
+      category = category.replace(new RegExp(spider.cover_category_regular), '');
+    }
+    let image = eval(spider.cover_image) as string;
+    if(spider.cover_image_regular) {
+      image = image.replace(new RegExp(spider.cover_image_regular), '');
+    }
+    let description = eval(spider.cover_description) as string;
+    if(spider.cover_description_regular) {
+      description = description.replace(new RegExp(spider.cover_description_regular), '');
+    }
+    let latest = eval(spider.cover_latest) as string;
+    if(spider.cover_latest_regular) {
+      latest = latest.replace(new RegExp(spider.cover_latest_regular), '');
+    }
+    let latest_title = eval(spider.cover_latest_title) as string;
+    if(spider.cover_latest_title_regular) {
+      latest_title = latest_title.replace(new RegExp(spider.cover_latest_title_regular), '');
+    }
+    let latest_url = eval(spider.cover_latest_url) as string;
+    latest_url = (new URL(latest_url, response.config.url)).toString();
+    let status = eval(spider.cover_status) as string;
+    if(spider.cover_status_regular) {
+      status = status.replace(new RegExp(spider.cover_status_regular), '');
+    }
+
+    const cover_item: CoverItem = {title, author, image, description, category, latest, latest_title, latest_url, status,}
     if (eventSubject) {
-      eventSubject.next({ type: 'cover', data: cover_item, timestamp: new Date().toISOString() });
-      this._catalog_sipder(response.config.url as string, eventSubject);
+      eventSubject.next({ type: 'book', data: cover_item, timestamp: new Date().toISOString() });
+      await this.bookService.create({
+        name: cover_item.title,
+        author: cover_item.author,
+        image: cover_item.image,
+        description: cover_item.description,
+        category: cover_item.category,
+        status: cover_item.status,
+        origin: response.config.url,
+      });
+      return await this._catalog_sipder(response.config.url as string, eventSubject);
     } else {
       return cover_item;
     }
   }
   private async _catalog_parse(response: AxiosResponse, eventSubject?: Subject<ItemEvent>) {
-    // const spider: SpiderModel = await this.spiderModelService.find(1);
+    const spider = await this.spiderModelService.find({ origin: (new URL(response.config.url as string)).origin });
+    if (!spider) {
+      return [];
+    }
     const $ = cheerio.load(response.data);
     const catalog_items: CatalogItem[] = [];
-    $('div.border_chapter>ul.fen_4>li').each((_, element) => {
-      const url = new URL($(element).find('a').attr('href') as string, response.config.url).toString();
-      const title = $(element).find('a').text().trim();
-      catalog_items.push({ url, title })
-      if (eventSubject) {
-        this._chapter_sipder(url, eventSubject);
+    $('div.border_chapter>ul.fen_4>li').map(async (_, element) => {
+      let url = new URL(eval(spider.catalog_url) as string, response.config.url).toString();
+      let title = eval(spider.catalog_title) as string;
+      if (spider.catalog_title_regular) {
+        title = title.replace(new RegExp(spider.catalog_title_regular), '');
       }
+      catalog_items.push({ url, title })
     })
     if (eventSubject) {
-      eventSubject.next({ type: 'catalog', data: catalog_items, timestamp: new Date().toISOString() });
+      const book = await this.bookService.find({ origin: response.config.url });
+      await this.chapterService.create(catalog_items.map((item) => ({
+        book_id: book?.id,
+        title: item.title,
+        origin: item.url,
+      })));
+      await Promise.all(
+        catalog_items.map(async (item) => {
+          await this._chapter_sipder(item.url!, eventSubject);
+        })
+      )
       // todo 下一页
     } else {
       return catalog_items;
     }
   }
   private async _chapter_parse(response: AxiosResponse, eventSubject?: Subject<ItemEvent>) {
-    // const spider: SpiderModel = await this.spiderModelService.find(1);
+    const spider = await this.spiderModelService.find({ origin: (new URL(response.config.url as string)).origin });
+    if (!spider) {
+      return;
+    }
     const $ = cheerio.load(response.data);
+    let title = eval(spider.chapter_title) as string;
+    if (spider.chapter_title_regular) {
+      title = title.replace(new RegExp(spider.chapter_title_regular), '');
+    }
     let content = '';
-    $('div#txt').contents().each((index, element) => {
+    (eval(spider.chapter_content) as cheerio.Cheerio<any>).contents().each((index, element) => {
       if ((element.type === 'text' || (element.type === 'tag' && element.name !== 'a')) && $(element).text().trim() !== '') {
-        content += `<p style="text-indent: 2em; line-height: 2em;">${$(element).text().trim()}</p>\n`
+        let item = $(element).text().trim()
+        if(spider.chapter_content_regular) {
+          item = item.replace(new RegExp(spider.chapter_content_regular), '');
+        }
+        if(item !== '') {
+          content += `<p style="text-indent: 2em; line-height: 2em;">${item}</p>\n`
+        }
       }
     });
-    const search_item: ChapterItem = {
-      title: $('h1').text().trim(),
-      content,
-    };
+    const chapter_item: ChapterItem = { title, content };
     if (eventSubject) {
-      eventSubject.next({ type: 'chapter', data: search_item, timestamp: new Date().toISOString() });
+      const chapter = await this.chapterService.find({ origin: response.config.url });
+      console.log('chapter',chapter)
+      await this.chapterService.update(chapter?.id!, {content: chapter_item.content});
+      eventSubject.next({ type: 'chapter', data: {title: chapter_item.title}, timestamp: new Date().toISOString() });
     } else {
-      return search_item;
+      return chapter_item;
     }
   }
 
