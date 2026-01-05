@@ -25,12 +25,12 @@ export default class VoiceService {
   async audio(id: string|number, voice?: string) {
     let title = '';
     let content = '';
-    if (typeof id === 'string') {
-      let chapter = await this.spiderService.chapter(id);
+    if (!isNaN(parseFloat(id as string))) {
+      let chapter = await this.chapterModelService.find(Number(id));
       title = chapter?.title || '';
       content = chapter?.content || '';
     } else {
-      let chapter = await this.chapterModelService.find(id);
+      let chapter = await this.spiderService.chapter(id as string);
       title = chapter?.title || '';
       content = chapter?.content || '';
     }
@@ -38,6 +38,7 @@ export default class VoiceService {
       return null;
     }
     content = cheerio.load(`${title}\n${content}`).text();
+    console.log(title, content);
     const tts = new EdgeTTS(`${title}\n${content}`, voice);
     const res = await tts.synthesize();
     return {
