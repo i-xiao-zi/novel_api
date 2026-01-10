@@ -41,10 +41,10 @@ export default class SpiderService {
   private async _book_sipder(url: string, eventSubject: Subject<ItemEvent>) {
     const spiders: SpiderModel[] = await this.spiderModelService.all();
     if (spiders.length == 0) {
-      eventSubject.next({ type: 'error', data: null, timestamp: new Date().toISOString() });
+      eventSubject.next({ type: 'error', data: undefined, timestamp: new Date().toISOString() });
     } else {
       await this._cover_sipder(url, eventSubject);
-      eventSubject.next({ type: 'complete', data: null, timestamp: new Date().toISOString() });
+      eventSubject.next({ type: 'complete', data: undefined, timestamp: new Date().toISOString() });
     }
   }
   private async _search_sipder(keywords: string) {
