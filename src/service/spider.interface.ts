@@ -1,6 +1,6 @@
 export interface ItemEvent {
     type: 'book' | 'chapter' | 'error' | 'complete' | 'close';
-    data: CoverItem | ChapterItem | null;
+    data: CoverItem | ChapterItem | undefined | string;
     timestamp: string;
 }
 

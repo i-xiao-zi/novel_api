@@ -8,6 +8,8 @@ export interface ChapterModel {
   title: string;
   content: string;
   description: string;
+  subtitle: Object;
+  audio: Buffer;
   origin: string;
   created_at: string;
   updated_at: string;
@@ -22,6 +24,10 @@ export default class ChapterModelService extends ModelService {
   }
   async all(): Promise<ChapterModel[]> {
     const result = await this.table().select('*').neq('deleted_at', null);
+    return result.data || [];
+  }
+  async book(id: number): Promise<Partial<ChapterModel>[]> {
+    const result = await this.table().select('id, title, content').eq('book_id', id);
     return result.data || [];
   }
   async find(args: number|Partial<ChapterModel>): Promise<ChapterModel | null> {
